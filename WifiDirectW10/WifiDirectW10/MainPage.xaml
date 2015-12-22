@@ -55,6 +55,10 @@
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <StackPanel Name="Discover" Grid.Row ="0" Orientation="Horizontal">
@@ -64,8 +68,6 @@
         <StackPanel Name="DiscoveredDevices" Grid.Row="1">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
@@ -108,6 +110,27 @@
                         </Style>
                     </ListView.ItemContainerStyle>
                 </ListView>
+            </Grid>
+        </StackPanel>
+        <StackPanel Name="OutGoingMessages" Grid.Row="3">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Button Content="Send message" x:Name="SendMessageButton" Click="SendMessageButton_Click" Margin="5,10,0,0" Grid.Row="0" FontSize="20"/>
+                <TextBox x:Name="messageBox" Text="" Margin="5,10,0,0" Grid.Row="0" FontSize="10"/>
+            </Grid>
+        </StackPanel>
+        <StackPanel Name="InComingMessages" Grid.Row="3">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="Messages:" Margin="5,10,0,0" Grid.Row="0" FontSize="20"/>
+                <TextBlock x:Name="incomingMessages" Margin="5,10,0,0" Grid.Row="1" TextWrapping="WrapWholeWords"  FontSize="10"/>
+
             </Grid>
         </StackPanel>
     </Grid>

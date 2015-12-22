@@ -7,6 +7,8 @@ using Windows.Devices.WiFiDirect;
 
 namespace WifiDirectW10.Engine
 {
+    public delegate void messageEventHandler(bool incoming, string message,string error);
+
     public class SocketReaderWriter : IDisposable
     {
         DataReader _dataReader;
@@ -14,6 +16,8 @@ namespace WifiDirectW10.Engine
         StreamSocket _streamSocket;
         private MainPage _rootPage;
         string _currentMessage;
+
+        public event messageEventHandler messageEventHandler;
 
         public SocketReaderWriter(StreamSocket socket, MainPage mainPage)
         {
@@ -44,11 +48,17 @@ namespace WifiDirectW10.Engine
                 _dataWriter.WriteUInt32(_dataWriter.MeasureString(message));
                 _dataWriter.WriteString(message);
                 await _dataWriter.StoreAsync();
-                System.Diagnostics.Debug.WriteLine("Sent message: " + message);
+                if(messageEventHandler != null)
+                {
+                    messageEventHandler(false, message,null);
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("WriteMessage threw exception: " + ex.Message);
+                if (messageEventHandler != null)
+                {
+                    messageEventHandler(false, message, ex.Message);
+                }
             }
         }
 
@@ -66,15 +76,20 @@ namespace WifiDirectW10.Engine
                     {
                         // Decode the string.
                         _currentMessage = _dataReader.ReadString(messageLength);
-                        System.Diagnostics.Debug.WriteLine("Got message: " + _currentMessage);
-
+                        if (messageEventHandler != null)
+                        {
+                            messageEventHandler(true, _currentMessage, null);
+                        }
                         ReadMessage();
                     }
                 }
             }
             catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine("Socket was closed!");
+                if (messageEventHandler != null)
+                {
+                    messageEventHandler(true, _currentMessage, "Socket was closed!");
+                }
             }
         }
 

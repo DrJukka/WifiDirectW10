@@ -9,6 +9,7 @@ using Windows.Devices.Enumeration;
 using Windows.Devices.WiFiDirect;
 using Windows.Networking.Sockets;
 using Windows.UI.Core;
+using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
@@ -50,7 +51,7 @@ namespace WifiDirectW10
             _discoveryRWLock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
             _fWatcherStarted = false;
             _discoveredDevices = new ObservableCollection<DiscoveredDevice>();
-          
+
             lvDiscoveredDevices.ItemsSource = _discoveredDevices;
             lvDiscoveredDevices.SelectionMode = ListViewSelectionMode.Single;
 
@@ -73,7 +74,7 @@ namespace WifiDirectW10
 
                 String deviceSelector = WiFiDirectDevice.GetDeviceSelector(WiFiDirectDeviceSelectorType.AssociationEndpoint);
                 System.Diagnostics.Debug.WriteLine("deviceSelector : " + deviceSelector);
-                
+
                 System.Diagnostics.Debug.WriteLine("deviceSelector : " + deviceSelector);
                 _deviceWatcher = DeviceInformation.CreateWatcher(deviceSelector);
 
@@ -173,11 +174,11 @@ namespace WifiDirectW10
             try
             {
                 DiscoveredDevice selItem = (DiscoveredDevice)e.ClickedItem;
-                System.Diagnostics.Debug.WriteLine("Item clicked");
+                System.Diagnostics.Debug.WriteLine("Item clicked to connect to");
 
                 WiFiDirectConnectionParameters connectionParams = new WiFiDirectConnectionParameters();
                 connectionParams.GroupOwnerIntent = Convert.ToInt16("1");
-               // connectionParams.PreferredPairingProcedure = WiFiDirectPairingProcedure.GroupOwnerNegotiation;
+                // connectionParams.PreferredPairingProcedure = WiFiDirectPairingProcedure.GroupOwnerNegotiation;
 
                 System.Diagnostics.Debug.WriteLine("connectionParams");
 
@@ -205,6 +206,8 @@ namespace WifiDirectW10
 
                 string sessionId = "Session: " + Path.GetRandomFileName();
                 ConnectedDevice connectedDevice = new ConnectedDevice(sessionId, ConnDevice, socketRW);
+                connectedDevice.gotMessage += ConnectedDevice_gotMessage;
+                connectedDevice.messageSent += ConnectedDevice_messageSent;
                 _connectedDevices.Add(connectedDevice);
 
                 socketRW.ReadMessage();
@@ -293,8 +296,8 @@ namespace WifiDirectW10
                         WiFiDirectConnectionParameters connectionParams = new WiFiDirectConnectionParameters();
                         connectionParams.GroupOwnerIntent = Convert.ToInt16("9");
 
-                    // IMPORTANT: FromIdAsync needs to be called from the UI thread
-                    tcsWiFiDirectDevice.SetResult(await WiFiDirectDevice.FromIdAsync(ConnectionRequest.DeviceInformation.Id, connectionParams));
+                        // IMPORTANT: FromIdAsync needs to be called from the UI thread
+                        tcsWiFiDirectDevice.SetResult(await WiFiDirectDevice.FromIdAsync(ConnectionRequest.DeviceInformation.Id, connectionParams));
                     }
                     catch (Exception ex)
                     {
@@ -309,6 +312,9 @@ namespace WifiDirectW10
                 await Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
                 {
                     ConnectedDevice connectedDevice = new ConnectedDevice("Waiting for client to connect...", wfdDevice, null);
+                    connectedDevice.gotMessage += ConnectedDevice_gotMessage;
+                    connectedDevice.messageSent += ConnectedDevice_messageSent;
+
                     _connectedDevices.Add(connectedDevice);
                 });
 
@@ -326,6 +332,8 @@ namespace WifiDirectW10
                 System.Diagnostics.Debug.WriteLine("Connect operation threw an exception: " + ex.Message);
             }
         }
+
+  
 
         private async void _listenerSocket_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
         {
@@ -373,14 +381,110 @@ namespace WifiDirectW10
             }
         }
 
+
+
         private void WfdDevice_ConnectionStatusChanged(WiFiDirectDevice sender, object args)
         {
+            
             System.Diagnostics.Debug.WriteLine("Connection in status changed: " + sender.ConnectionStatus);
         }
 
-        private void lvConnectedDevices_ItemClick(object sender, ItemClickEventArgs e)
+        private async void lvConnectedDevices_ItemClick(object sender, ItemClickEventArgs e)
         {
+            try
+            {
+                ConnectedDevice connectedDevice = (ConnectedDevice)e.ClickedItem;
+                System.Diagnostics.Debug.WriteLine("Item clicked for disconnecting");
 
+                var doProceed = await ShowQueryDialog("disconnect " + connectedDevice.DisplayName + " ?", "Disconnect device");
+                if (doProceed == true)
+                {
+                    connectedDevice.gotMessage -= ConnectedDevice_gotMessage;
+                    connectedDevice.messageSent -= ConnectedDevice_messageSent;
+
+                    connectedDevice.SocketRW.Dispose();
+
+                    // Close WiFiDirectDevice object
+                    connectedDevice.WfdDevice.Dispose();
+                    _connectedDevices.Remove(connectedDevice);
+
+                    System.Diagnostics.Debug.WriteLine(connectedDevice.DisplayName + " closed successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Close threw an exception: " + ex.Message);
+            }
+        }
+
+        private async Task<bool> ShowQueryDialog(string message, string title)
+        {
+            bool fProceed = false;
+            await this.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
+            {
+                var tcs = new TaskCompletionSource<bool>();
+                var dialogTask = tcs.Task;
+                var messageDialog = new MessageDialog(message, title);
+
+                // Add commands and set their callbacks; both buttons use the same callback function instead of inline event handlers 
+                messageDialog.Commands.Add(new UICommand("Accept", null, 0));
+                messageDialog.Commands.Add(new UICommand("Decline", null, 1));
+
+                // Set the command that will be invoked by default 
+                messageDialog.DefaultCommandIndex = 1;
+
+                // Set the command to be invoked when escape is pressed 
+                messageDialog.CancelCommandIndex = 1;
+                // Show the message dialog 
+                var commandChosen = await messageDialog.ShowAsync();
+
+                tcs.SetResult((commandChosen.Label == "Accept") ? true : false);
+                
+                fProceed = await dialogTask;
+            });
+
+            return fProceed;
+        }
+
+        private void SendMessageButton_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (ConnectedDevice device in _connectedDevices)
+            {
+                try
+                {
+                    device.SocketRW.WriteMessage(messageBox.Text);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("WriteMessage threw an exception: " + ex.Message);
+                }
+            }
+        }
+
+        private void ConnectedDevice_messageSent(ConnectedDevice device, string message, string error)
+        {
+            if (error != null)
+            {
+                System.Diagnostics.Debug.WriteLine("WriteMessage threw exception: " + error);
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine("Sent : " + device.DisplayName + " : " + message);
+        }
+
+        private void ConnectedDevice_gotMessage(ConnectedDevice device, string message, string error)
+        {
+            if (error != null)
+            {
+                System.Diagnostics.Debug.WriteLine("gotMessage threw exception: " + error);
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine("Got message from : " + device.DisplayName + " : " + message);
+
+            var tmpText = incomingMessages.Text;
+
+            incomingMessages.Text = device.DisplayName + " : " + message + "\\r\\n" + tmpText;
         }
     }
 }

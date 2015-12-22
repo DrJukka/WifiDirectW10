@@ -10,6 +10,9 @@ using Windows.Devices.WiFiDirect;
 
 namespace WifiDirectW10.Model
 {
+    public delegate void messageSentHandler(ConnectedDevice device, string message, string error);
+    public delegate void gotMessageHandler(ConnectedDevice device, string message, string error);
+
     public class ConnectedDevice : INotifyPropertyChanged
     {
         private SocketReaderWriter socketRW;
@@ -19,8 +22,28 @@ namespace WifiDirectW10.Model
         public ConnectedDevice(string displayName, WiFiDirectDevice wfdDevice, SocketReaderWriter socketRW)
         {
             this.socketRW = socketRW;
+            socketRW.messageEventHandler += SocketRW_messageEventHandler;
+
             this.wfdDevice = wfdDevice;
             this.displayName = displayName;
+        }
+
+        private void SocketRW_messageEventHandler(bool incoming, string message, string error)
+        {
+            if (incoming)
+            {
+                if (gotMessage != null)
+                {
+                    gotMessage(this,message, error);
+                }
+
+                return;
+            }
+            //outgoing
+            if (messageSent != null)
+            {
+                messageSent(this, message, error);
+            }
         }
 
         private ConnectedDevice() { }
@@ -86,5 +109,7 @@ namespace WifiDirectW10.Model
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
+        public event messageSentHandler messageSent;
+        public event gotMessageHandler gotMessage;
     }
 }

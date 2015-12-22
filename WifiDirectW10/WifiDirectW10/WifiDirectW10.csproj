@@ -97,7 +97,6 @@
     </Compile>
     <Compile Include="Engine\Globals.cs" />
     <Compile Include="Engine\SocketReaderWriter.cs" />
-    <Compile Include="Engine\WDAdvertiser.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
