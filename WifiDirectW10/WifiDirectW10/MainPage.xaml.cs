@@ -26,7 +26,9 @@ namespace WifiDirectW10
         CancellationTokenSource _cancellationTokenSource;
 
         bool _WDAdvertiserStarted;
-        WDAdvertiser _advertiser;
+        private WiFiDirectAdvertisementPublisher _publisher;
+        private WiFiDirectConnectionListener _listener;
+
         private Task discoveredDevice;
 
         public ObservableCollection<DiscoveredDevice> _discoveredDevices
@@ -178,7 +180,7 @@ namespace WifiDirectW10
 
                 WiFiDirectConnectionParameters connectionParams = new WiFiDirectConnectionParameters();
                 connectionParams.GroupOwnerIntent = Convert.ToInt16("1");
-                connectionParams.PreferredPairingProcedure = WiFiDirectPairingProcedure.GroupOwnerNegotiation;
+               // connectionParams.PreferredPairingProcedure = WiFiDirectPairingProcedure.GroupOwnerNegotiation;
 
                 System.Diagnostics.Debug.WriteLine("connectionParams");
 
@@ -203,10 +205,12 @@ namespace WifiDirectW10
 
         private void btnAdvertiser_Click(object sender, RoutedEventArgs e)
         {
-            if (_advertiser != null)
+            if (_publisher != null)
             {
-                _advertiser.Dispose();
-                _advertiser = null;
+                _listener.ConnectionRequested -= _listener_ConnectionRequested;
+                _publisher.Stop();
+                _publisher = null;
+                _listener = null;
             }
 
             if (_WDAdvertiserStarted == false)
@@ -214,7 +218,13 @@ namespace WifiDirectW10
                 btnAdvertiser.Content = "Stop Advertiser";
                 _WDAdvertiserStarted = true;
 
-                _advertiser = new WDAdvertiser();
+                _publisher = new WiFiDirectAdvertisementPublisher();
+                _publisher.Advertisement.ListenStateDiscoverability = WiFiDirectAdvertisementListenStateDiscoverability.Intensive;
+
+                _listener = new WiFiDirectConnectionListener();
+                _listener.ConnectionRequested += _listener_ConnectionRequested;
+
+                _publisher.Start();
             }
             else
             {
@@ -222,6 +232,67 @@ namespace WifiDirectW10
                 _WDAdvertiserStarted = false;
             }
 
+        }
+
+        private async void _listener_ConnectionRequested(WiFiDirectConnectionListener sender, WiFiDirectConnectionRequestedEventArgs args)
+        {
+
+            WiFiDirectConnectionRequest ConnectionRequest = args.GetConnectionRequest();
+
+            DeviceInformation devInfo = ConnectionRequest.DeviceInformation;
+
+            System.Diagnostics.Debug.WriteLine("Name : " + devInfo.Name + ", Id: " + devInfo.Id);
+
+            foreach (String key in devInfo.Properties.Keys)
+            {
+                System.Diagnostics.Debug.WriteLine("key : " + key);
+                Object tmpObject = null;
+                System.Diagnostics.Debug.WriteLine("try-get : " + devInfo.Properties.TryGetValue(key, out tmpObject));
+                if (tmpObject != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("Object type " + tmpObject.GetType().ToString());
+                }
+            }
+
+            var tcsWiFiDirectDevice = new TaskCompletionSource<WiFiDirectDevice>();
+            var wfdDeviceTask = tcsWiFiDirectDevice.Task;
+
+            await Dispatcher.RunAsync(CoreDispatcherPriority.High, async () =>
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine("Connecting to " + ConnectionRequest.DeviceInformation.Name + "...");
+
+                    WiFiDirectConnectionParameters connectionParams = new WiFiDirectConnectionParameters();
+                    connectionParams.GroupOwnerIntent = Convert.ToInt16("9");
+
+                    // IMPORTANT: FromIdAsync needs to be called from the UI thread
+                    tcsWiFiDirectDevice.SetResult(await WiFiDirectDevice.FromIdAsync(ConnectionRequest.DeviceInformation.Id, connectionParams));
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("FromIdAsync task threw an exception: " + ex.ToString());
+                }
+            });
+
+            WiFiDirectDevice wfdDevice = await wfdDeviceTask;
+
+            // Prompt the user to accept/reject the connection request
+            // If rejected, exit
+
+     /*       // Connect to the remote device
+            WiFiDirectConnectionParameters connectionParams = new WiFiDirectConnectionParameters();
+            connectionParams.GroupOwnerIntent = Convert.ToInt16("1");
+
+            WiFiDirectDevice wfdDevice = await WiFiDirectDevice.FromIdAsync(ConnectionRequest.DeviceInformation.Id, connectionParams);
+
+            //WiFiDirectDevice wfdDevice = await WiFiDirectDevice.FromIdAsync(ConnectionRequest.DeviceInformation.Id);
+
+            // Get the local and remote IP addresses
+            var EndpointPairs = wfdDevice.GetConnectionEndpointPairs();
+            */
+
+            // Establish standard WinRT socket with above IP addresses
         }
     }
 }

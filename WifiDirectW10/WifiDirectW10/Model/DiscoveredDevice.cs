@@ -24,7 +24,7 @@ namespace WifiDirectW10.Model
         {
             get
             {
-                Object deviceIcon = null;
+              /*  Object deviceIcon = null;
                 if (_item.Properties.TryGetValue("System.Devices.Icon", out deviceIcon))
                 {
                     if (deviceIcon == null)
@@ -40,7 +40,7 @@ namespace WifiDirectW10.Model
                     }
                 }
                 System.Diagnostics.Debug.WriteLine("no icons found for : " + Name);
-
+                */
                 return "Assets/StoreLogo.png";
             }
         }

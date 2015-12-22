@@ -33,6 +33,7 @@ namespace WifiDirectW10.Engine
                 DeviceInformation devInfo = ConnectionRequest.DeviceInformation;
 
                 System.Diagnostics.Debug.WriteLine("Name : " + devInfo.Name + ", Id: " + devInfo.Id);
+
                 foreach (String key in devInfo.Properties.Keys)
                 {
                     System.Diagnostics.Debug.WriteLine("key : " + key);
@@ -44,11 +45,16 @@ namespace WifiDirectW10.Engine
                     }
                 }
 
-                // Prompt the user to accept/reject the connection request
-                // If rejected, exit
+            // Prompt the user to accept/reject the connection request
+            // If rejected, exit
 
-                // Connect to the remote device
-                WiFiDirectDevice wfdDevice = await WiFiDirectDevice.FromIdAsync(ConnectionRequest.DeviceInformation.Id);
+            // Connect to the remote device
+            WiFiDirectConnectionParameters connectionParams = new WiFiDirectConnectionParameters();
+            connectionParams.GroupOwnerIntent = Convert.ToInt16("1");
+
+            WiFiDirectDevice wfdDevice = await WiFiDirectDevice.FromIdAsync(ConnectionRequest.DeviceInformation.Id, connectionParams);
+
+            //WiFiDirectDevice wfdDevice = await WiFiDirectDevice.FromIdAsync(ConnectionRequest.DeviceInformation.Id);
 
                 // Get the local and remote IP addresses
                 var EndpointPairs = wfdDevice.GetConnectionEndpointPairs();

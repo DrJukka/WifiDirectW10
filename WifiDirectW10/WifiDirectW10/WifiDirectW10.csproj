@@ -95,13 +95,13 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Engine\SocketReaderWriter.cs" />
     <Compile Include="Engine\WDAdvertiser.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Model\ConnectedDevice.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SocketReaderWriter.cs" />
     <Compile Include="Model\DiscoveredDevice.cs" />
   </ItemGroup>
   <ItemGroup>

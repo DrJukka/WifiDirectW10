@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using WifiDirectW10;
+using WifiDirectW10.Engine;
 using Windows.Devices.WiFiDirect;
 
 public class ConnectedDevice : INotifyPropertyChanged
