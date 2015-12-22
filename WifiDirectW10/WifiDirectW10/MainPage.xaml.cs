@@ -189,9 +189,6 @@ namespace WifiDirectW10
                 WiFiDirectDevice ConnDevice = await WiFiDirectDevice.FromIdAsync(selItem.DeviceInfo.Id, connectionParams).AsTask(_cancellationTokenSource.Token);
                 System.Diagnostics.Debug.WriteLine("Item WiFiDirectDevice.FromIdAsync");
 
-                // Register for the ConnectionStatusChanged event handler
-                ConnDevice.ConnectionStatusChanged += ConnDevice_ConnectionStatusChanged;
-
                 var endpointPairs = ConnDevice.GetConnectionEndpointPairs();
 
                 System.Diagnostics.Debug.WriteLine("Devices connected on L2 layer, connecting to IP Address: " + endpointPairs[0].RemoteHostName + " Port: " + Globals.strServerPort);
@@ -208,6 +205,8 @@ namespace WifiDirectW10
                 ConnectedDevice connectedDevice = new ConnectedDevice(sessionId, ConnDevice, socketRW);
                 connectedDevice.gotMessage += ConnectedDevice_gotMessage;
                 connectedDevice.messageSent += ConnectedDevice_messageSent;
+                connectedDevice.deviceDisconnected += ConnectedDevice_deviceDisconnected;
+
                 _connectedDevices.Add(connectedDevice);
 
                 socketRW.ReadMessage();
@@ -225,11 +224,6 @@ namespace WifiDirectW10
             }
 
             _cancellationTokenSource = null;
-        }
-
-        private void ConnDevice_ConnectionStatusChanged(WiFiDirectDevice sender, object args)
-        {
-            System.Diagnostics.Debug.WriteLine("Connection out status changed: " + sender.ConnectionStatus);
         }
 
         private void btnAdvertiser_Click(object sender, RoutedEventArgs e)
@@ -307,14 +301,14 @@ namespace WifiDirectW10
 
                 WiFiDirectDevice wfdDevice = await wfdDeviceTask;
                 System.Diagnostics.Debug.WriteLine("Connection status : " + wfdDevice.ConnectionStatus);
-                wfdDevice.ConnectionStatusChanged += WfdDevice_ConnectionStatusChanged;
-
+              
+            
                 await Dispatcher.RunAsync(CoreDispatcherPriority.High, () =>
                 {
                     ConnectedDevice connectedDevice = new ConnectedDevice("Waiting for client to connect...", wfdDevice, null);
                     connectedDevice.gotMessage += ConnectedDevice_gotMessage;
                     connectedDevice.messageSent += ConnectedDevice_messageSent;
-
+                    connectedDevice.deviceDisconnected += ConnectedDevice_deviceDisconnected;
                     _connectedDevices.Add(connectedDevice);
                 });
 
@@ -332,8 +326,6 @@ namespace WifiDirectW10
                 System.Diagnostics.Debug.WriteLine("Connect operation threw an exception: " + ex.Message);
             }
         }
-
-  
 
         private async void _listenerSocket_ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
         {
@@ -381,14 +373,6 @@ namespace WifiDirectW10
             }
         }
 
-
-
-        private void WfdDevice_ConnectionStatusChanged(WiFiDirectDevice sender, object args)
-        {
-            
-            System.Diagnostics.Debug.WriteLine("Connection in status changed: " + sender.ConnectionStatus);
-        }
-
         private async void lvConnectedDevices_ItemClick(object sender, ItemClickEventArgs e)
         {
             try
@@ -396,54 +380,37 @@ namespace WifiDirectW10
                 ConnectedDevice connectedDevice = (ConnectedDevice)e.ClickedItem;
                 System.Diagnostics.Debug.WriteLine("Item clicked for disconnecting");
 
-                var doProceed = await ShowQueryDialog("disconnect " + connectedDevice.DisplayName + " ?", "Disconnect device");
-                if (doProceed == true)
+                await this.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
                 {
-                    connectedDevice.gotMessage -= ConnectedDevice_gotMessage;
-                    connectedDevice.messageSent -= ConnectedDevice_messageSent;
+                    var tcs = new TaskCompletionSource<bool>();
+                    var dialogTask = tcs.Task;
+                    var messageDialog = new MessageDialog("Disconnect " + connectedDevice.DisplayName, "Disconnect device");
 
-                    connectedDevice.SocketRW.Dispose();
+                    // Add commands and set their callbacks; both buttons use the same callback function instead of inline event handlers 
+                    messageDialog.Commands.Add(new UICommand("Accept", null, 0));
+                    messageDialog.Commands.Add(new UICommand("Decline", null, 1));
 
-                    // Close WiFiDirectDevice object
-                    connectedDevice.WfdDevice.Dispose();
-                    _connectedDevices.Remove(connectedDevice);
+                    // Set the command that will be invoked by default 
+                    messageDialog.DefaultCommandIndex = 1;
 
-                    System.Diagnostics.Debug.WriteLine(connectedDevice.DisplayName + " closed successfully");
-                }
+                    // Set the command to be invoked when escape is pressed 
+                    messageDialog.CancelCommandIndex = 1;
+                    // Show the message dialog 
+                    var commandChosen = await messageDialog.ShowAsync();
+
+                    tcs.SetResult((commandChosen.Label == "Accept") ? true : false);
+
+                    var doProceed = await dialogTask;
+                    if (doProceed == true)
+                    {
+                        ConnectedDevice_deviceDisconnected(connectedDevice);
+                    }
+                });
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("Close threw an exception: " + ex.Message);
             }
-        }
-
-        private async Task<bool> ShowQueryDialog(string message, string title)
-        {
-            bool fProceed = false;
-            await this.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
-            {
-                var tcs = new TaskCompletionSource<bool>();
-                var dialogTask = tcs.Task;
-                var messageDialog = new MessageDialog(message, title);
-
-                // Add commands and set their callbacks; both buttons use the same callback function instead of inline event handlers 
-                messageDialog.Commands.Add(new UICommand("Accept", null, 0));
-                messageDialog.Commands.Add(new UICommand("Decline", null, 1));
-
-                // Set the command that will be invoked by default 
-                messageDialog.DefaultCommandIndex = 1;
-
-                // Set the command to be invoked when escape is pressed 
-                messageDialog.CancelCommandIndex = 1;
-                // Show the message dialog 
-                var commandChosen = await messageDialog.ShowAsync();
-
-                tcs.SetResult((commandChosen.Label == "Accept") ? true : false);
-                
-                fProceed = await dialogTask;
-            });
-
-            return fProceed;
         }
 
         private void SendMessageButton_Click(object sender, RoutedEventArgs e)
@@ -461,30 +428,54 @@ namespace WifiDirectW10
             }
         }
 
-        private void ConnectedDevice_messageSent(ConnectedDevice device, string message, string error)
+        private async void ConnectedDevice_deviceDisconnected(ConnectedDevice device)
         {
-            if (error != null)
-            {
-                System.Diagnostics.Debug.WriteLine("WriteMessage threw exception: " + error);
-                return;
-            }
+           await this.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+           {
+               device.gotMessage -= ConnectedDevice_gotMessage;
+               device.messageSent -= ConnectedDevice_messageSent;
+               device.deviceDisconnected -= ConnectedDevice_deviceDisconnected;
 
-            System.Diagnostics.Debug.WriteLine("Sent : " + device.DisplayName + " : " + message);
+               device.SocketRW.Dispose();
+
+               // Close WiFiDirectDevice object
+               device.WfdDevice.Dispose();
+               _connectedDevices.Remove(device);
+
+               System.Diagnostics.Debug.WriteLine(device.DisplayName + " closed successfully");
+           });
         }
 
-        private void ConnectedDevice_gotMessage(ConnectedDevice device, string message, string error)
+        private async void ConnectedDevice_messageSent(ConnectedDevice device, string message, string error)
         {
-            if (error != null)
+            await this.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
             {
-                System.Diagnostics.Debug.WriteLine("gotMessage threw exception: " + error);
-                return;
-            }
+                if (error != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("WriteMessage threw exception: " + error);
+                    return;
+                }
 
-            System.Diagnostics.Debug.WriteLine("Got message from : " + device.DisplayName + " : " + message);
+                System.Diagnostics.Debug.WriteLine("Sent : " + device.DisplayName + " : " + message);
+            });
+        }
 
-            var tmpText = incomingMessages.Text;
+        private async void ConnectedDevice_gotMessage(ConnectedDevice device, string message, string error)
+        {
+            await this.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,  () =>
+            {
+                if (error != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("gotMessage threw exception: " + error);
+                    return;
+                }
 
-            incomingMessages.Text = device.DisplayName + " : " + message + "\\r\\n" + tmpText;
+                System.Diagnostics.Debug.WriteLine("Got message from : " + device.DisplayName + " : " + message);
+
+                var tmpText = incomingMessages.Text;
+
+                incomingMessages.Text = device.DisplayName + " : " + message + " : " + tmpText;
+            });
         }
     }
 }

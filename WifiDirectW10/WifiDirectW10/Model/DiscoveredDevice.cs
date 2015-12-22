@@ -49,7 +49,7 @@ namespace WifiDirectW10.Model
         {
             _item = deviceInfoIn;
 
-            foreach (String key in deviceInfoIn.Properties.Keys)
+         /*   foreach (String key in deviceInfoIn.Properties.Keys)
             {
                 System.Diagnostics.Debug.WriteLine("key : " + key);
                 Object tmpObject = null;
@@ -58,7 +58,7 @@ namespace WifiDirectW10.Model
                 {
                     System.Diagnostics.Debug.WriteLine("Object type " + tmpObject.GetType().ToString());
                 }
-            }
+            }*/
         }
 
         public DeviceInformation DeviceInfo

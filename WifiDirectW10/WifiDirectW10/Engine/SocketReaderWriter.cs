@@ -84,11 +84,11 @@ namespace WifiDirectW10.Engine
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 if (messageEventHandler != null)
                 {
-                    messageEventHandler(true, _currentMessage, "Socket was closed!");
+                    messageEventHandler(true, _currentMessage, ex.Message);
                 }
             }
         }

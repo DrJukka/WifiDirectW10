@@ -12,6 +12,7 @@ namespace WifiDirectW10.Model
 {
     public delegate void messageSentHandler(ConnectedDevice device, string message, string error);
     public delegate void gotMessageHandler(ConnectedDevice device, string message, string error);
+    public delegate void deviceDisconnectedHandler(ConnectedDevice device);
 
     public class ConnectedDevice : INotifyPropertyChanged
     {
@@ -27,7 +28,18 @@ namespace WifiDirectW10.Model
                 socketRW.messageEventHandler += SocketRW_messageEventHandler;
             }
             this.wfdDevice = wfdDevice;
+            if (this.wfdDevice != null) {
+                this.wfdDevice.ConnectionStatusChanged += WfdDevice_ConnectionStatusChanged;
+            }
             this.displayName = displayName;
+        }
+
+        private void WfdDevice_ConnectionStatusChanged(WiFiDirectDevice sender, object args)
+        {
+            if ((sender.ConnectionStatus == WiFiDirectConnectionStatus.Disconnected) && (deviceDisconnected != null))
+            {
+                deviceDisconnected(this);
+            }
         }
 
         private void SocketRW_messageEventHandler(bool incoming, string message, string error)
@@ -80,7 +92,15 @@ namespace WifiDirectW10.Model
 
             set
             {
+                if (wfdDevice != null)
+                {
+                    wfdDevice.ConnectionStatusChanged -= WfdDevice_ConnectionStatusChanged;
+                }
                 wfdDevice = value;
+                if (wfdDevice != null)
+                {
+                    wfdDevice.ConnectionStatusChanged += WfdDevice_ConnectionStatusChanged;
+                }
             }
         }
 
@@ -119,6 +139,7 @@ namespace WifiDirectW10.Model
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
+        public event deviceDisconnectedHandler deviceDisconnected;
         public event messageSentHandler messageSent;
         public event gotMessageHandler gotMessage;
     }
