@@ -22,8 +22,10 @@ namespace WifiDirectW10.Model
         public ConnectedDevice(string displayName, WiFiDirectDevice wfdDevice, SocketReaderWriter socketRW)
         {
             this.socketRW = socketRW;
-            socketRW.messageEventHandler += SocketRW_messageEventHandler;
-
+            if (this.socketRW != null)
+            {
+                socketRW.messageEventHandler += SocketRW_messageEventHandler;
+            }
             this.wfdDevice = wfdDevice;
             this.displayName = displayName;
         }
@@ -57,7 +59,15 @@ namespace WifiDirectW10.Model
 
             set
             {
+                if (socketRW != null)
+                {
+                    socketRW.messageEventHandler -= SocketRW_messageEventHandler;
+                }
                 socketRW = value;
+                if (socketRW != null)
+                {
+                    socketRW.messageEventHandler += SocketRW_messageEventHandler;
+                }
             }
         }
 

@@ -119,10 +119,10 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 <Button Content="Send message" x:Name="SendMessageButton" Click="SendMessageButton_Click" Margin="5,10,0,0" Grid.Row="0" FontSize="20"/>
-                <TextBox x:Name="messageBox" Text="" Margin="5,10,0,0" Grid.Row="0" FontSize="10"/>
+                <TextBox x:Name="messageBox" Text="" Margin="5,10,0,0" Grid.Row="1" FontSize="10"/>
             </Grid>
         </StackPanel>
-        <StackPanel Name="InComingMessages" Grid.Row="3">
+        <StackPanel Name="InComingMessages" Grid.Row="4">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
