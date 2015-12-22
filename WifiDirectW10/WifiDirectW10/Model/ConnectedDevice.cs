@@ -8,64 +8,83 @@ using WifiDirectW10;
 using WifiDirectW10.Engine;
 using Windows.Devices.WiFiDirect;
 
-public class ConnectedDevice : INotifyPropertyChanged
+namespace WifiDirectW10.Model
 {
-    private SocketReaderWriter socketRW;
-    private WiFiDirectDevice wfdDevice;
-    private string displayName = "";
-
-    public ConnectedDevice(string displayName, WiFiDirectDevice wfdDevice, SocketReaderWriter socketRW)
+    public class ConnectedDevice : INotifyPropertyChanged
     {
-        this.socketRW = socketRW;
-        this.wfdDevice = wfdDevice;
-        this.displayName = displayName;
-    }
+        private SocketReaderWriter socketRW;
+        private WiFiDirectDevice wfdDevice;
+        private string displayName = "";
 
-    private ConnectedDevice() { }
-
-    public SocketReaderWriter SocketRW
-    {
-        get
+        public ConnectedDevice(string displayName, WiFiDirectDevice wfdDevice, SocketReaderWriter socketRW)
         {
-            return socketRW;
+            this.socketRW = socketRW;
+            this.wfdDevice = wfdDevice;
+            this.displayName = displayName;
         }
 
-        set
+        private ConnectedDevice() { }
+
+        public SocketReaderWriter SocketRW
         {
-            socketRW = value;
-        }
-    }
+            get
+            {
+                return socketRW;
+            }
 
-    public WiFiDirectDevice WfdDevice
-    {
-        get
+            set
+            {
+                socketRW = value;
+            }
+        }
+
+        public WiFiDirectDevice WfdDevice
         {
-            return wfdDevice;
+            get
+            {
+                return wfdDevice;
+            }
+
+            set
+            {
+                wfdDevice = value;
+            }
         }
 
-        set
-        {
-            wfdDevice = value;
-        }
-    }
-
-    public override string ToString()
-    {
-        return displayName;
-    }
-
-    public string DisplayName
-    {
-        get
+        public override string ToString()
         {
             return displayName;
         }
 
-        set
+        public string DisplayName
         {
-            displayName = value;
-        }
-    }
+            get
+            {
+                return displayName;
+            }
 
-    public event PropertyChangedEventHandler PropertyChanged;
+            set
+            {
+                displayName = value;
+            }
+        }
+
+        public string Icon
+        {
+            get
+            {
+                return "Assets/StoreLogo.png";
+            }
+        }
+
+        public string Name
+        {
+            get
+            {
+                return displayName;
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+    }
 }

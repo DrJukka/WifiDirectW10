@@ -29,6 +29,27 @@
                 </Border>
             </Border>
         </DataTemplate>
+        <DataTemplate x:Key="ConnectedDevicesListViewItemTemplate" x:DataType="local:Model.ConnectedDevice">
+            <Border  BorderBrush="#F8F8F8" BorderThickness="1" Margin="5,10,5,10">
+                <Border  BorderBrush="#E4E4E4" BorderThickness="1">
+                    <Border  BorderBrush="#949494" BorderThickness="1">
+                        <Grid Margin="5,5,5,5">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="50px" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Image  Grid.Column="0" Source="{x:Bind Icon}" Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Left" Text="{x:Bind Name}" FontSize="20" Style="{ThemeResource BaseTextBlockStyle}" Margin="10,10,10,10" />
+                        </Grid>
+                    </Border>
+                </Border>
+            </Border>
+        </DataTemplate>
     </Page.Resources>
     
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
@@ -44,12 +65,13 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
                 <TextBlock Text="Discovered Devices:" Margin="5,10,0,0" Grid.Row="0" FontSize="20"/>
                 <ProgressBar x:Name="SearchProgress" Visibility="Collapsed" VerticalAlignment="Top" IsIndeterminate="True" ></ProgressBar>
-                <!--<ListView Name="lvDiscoveredDevices" Margin="5,5,0,0" Grid.Row="1" Height="200" Width="350" Background="DimGray" ItemsSource="{Binding Source={StaticResource deviceListCVS}}" />-->
                 <ListView 
                     ItemTemplate="{StaticResource DeviceSelectionListViewItemTemplate}"
                     Name="lvDiscoveredDevices" 
@@ -65,6 +87,28 @@
                 </ListView>
             </Grid>
         </StackPanel>
+        <StackPanel Name="ConnectedDevices" Grid.Row="2">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
 
+                <TextBlock Text="Connected Devices:" Margin="5,10,0,0" Grid.Row="0" FontSize="20"/>
+                <ListView 
+                    ItemTemplate="{StaticResource ConnectedDevicesListViewItemTemplate}"
+                    Name="lvConnectedDevices" 
+                    Margin="5,5,0,0" 
+                    Grid.Row="1" 
+                    IsItemClickEnabled="True"
+                    ItemClick="lvConnectedDevices_ItemClick">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+            </Grid>
+        </StackPanel>
     </Grid>
 </Page>
