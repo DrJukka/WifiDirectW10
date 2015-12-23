@@ -1,0 +1,6 @@
+This is just to remember issues I'm personally having (so I'll remember them when I continue this ones of the days)
+- Not certain on how I see which party is GO (likely needed for multi connectivity)
+- Wifi Direct Scanning does not work on my phones
+- I'm not getting service advertising working event with PC
+- I can not see hidden networks with Wifi Scanning
+- Wifi Scanning is not working with my phones

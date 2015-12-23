@@ -62,7 +62,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <StackPanel Name="Discover" Grid.Row ="0" Orientation="Horizontal">
-            <Button Name="btnWatcher" Content="Start Watcher" HorizontalAlignment="Left" FontSize="20" Click="btnWatcher_Click"/>
+            <Button Name="btnWatcher" Content="Discover peers" HorizontalAlignment="Left" FontSize="20" Click="btnWatcher_Click"/>
             <Button Name="btnAdvertiser" Content="Start Advertiser" HorizontalAlignment="Right" FontSize="20" Click="btnAdvertiser_Click"/>
         </StackPanel>
         <StackPanel Name="DiscoveredDevices" Grid.Row="1">

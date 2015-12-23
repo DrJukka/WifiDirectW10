@@ -62,21 +62,41 @@ namespace WifiDirectW10
             lvConnectedDevices.SelectionMode = ListViewSelectionMode.Single;
         }
 
-        private void btnWatcher_Click(object sender, RoutedEventArgs e)
+        private async void btnWatcher_Click(object sender, RoutedEventArgs e)
         {
-            if (_fWatcherStarted == false)
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, async () =>
             {
-                SearchProgress.Visibility = Visibility.Visible;
-                btnWatcher.Content = "Stop Watcher";
+                /*   if (_fWatcherStarted == false)
+                   {
+                       btnWatcher.Content = "Stop Watcher";
+                   */
                 _fWatcherStarted = true;
                 _discoveredDevices.Clear();
                 _deviceWatcher = null;
 
+                SearchProgress.Visibility = Visibility.Visible;
                 String deviceSelector = WiFiDirectDevice.GetDeviceSelector(WiFiDirectDeviceSelectorType.AssociationEndpoint);
                 System.Diagnostics.Debug.WriteLine("deviceSelector : " + deviceSelector);
 
-                System.Diagnostics.Debug.WriteLine("deviceSelector : " + deviceSelector);
-                _deviceWatcher = DeviceInformation.CreateWatcher(deviceSelector);
+
+                var devices = await DeviceInformation.FindAllAsync(deviceSelector);
+                if (devices != null && devices.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("FindAllAsync devices.Count : " + devices.Count);
+                    foreach (DeviceInformation device in devices)
+                    {
+                        if (device != null)
+                        {
+                            _discoveryRWLock.EnterWriteLock();
+                            _discoveredDevices.Add(new DiscoveredDevice(device));
+                            _discoveryRWLock.ExitWriteLock();
+                        }
+                    }
+                }
+
+                SearchProgress.Visibility = Visibility.Collapsed;
+
+                /*_deviceWatcher = DeviceInformation.CreateWatcher(deviceSelector);
 
                 _deviceWatcher.Added += _deviceWatcher_Added;
                 _deviceWatcher.Removed += _deviceWatcher_Removed;
@@ -86,7 +106,7 @@ namespace WifiDirectW10
 
                 _deviceWatcher.Start();
             }
-            else
+           else
             {
                 btnWatcher.Content = "Start Watcher";
                 _fWatcherStarted = false;
@@ -98,10 +118,11 @@ namespace WifiDirectW10
                 _deviceWatcher.Stopped -= _deviceWatcher_Stopped;
 
                 _deviceWatcher.Stop();
-            }
+            }*/
+            });
         }
 
-        private async void _deviceWatcher_Added(DeviceWatcher sender, DeviceInformation args)
+    /*    private async void _deviceWatcher_Added(DeviceWatcher sender, DeviceInformation args)
         {
             await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
             {
@@ -168,6 +189,7 @@ namespace WifiDirectW10
                 System.Diagnostics.Debug.WriteLine("_deviceWatcher_EnumerationCompleted : ");
             });
         }
+        */
 
         private async void lvDiscoveredDevices_ItemClick(object sender, ItemClickEventArgs e)
         {
@@ -177,7 +199,7 @@ namespace WifiDirectW10
                 System.Diagnostics.Debug.WriteLine("Item clicked to connect to");
 
                 WiFiDirectConnectionParameters connectionParams = new WiFiDirectConnectionParameters();
-                connectionParams.GroupOwnerIntent = Convert.ToInt16("1");
+                connectionParams.GroupOwnerIntent = Int16.MinValue;// Convert.ToInt16("1");
                 // connectionParams.PreferredPairingProcedure = WiFiDirectPairingProcedure.GroupOwnerNegotiation;
 
                 System.Diagnostics.Debug.WriteLine("connectionParams");
@@ -244,6 +266,27 @@ namespace WifiDirectW10
                 _publisher = new WiFiDirectAdvertisementPublisher();
                 _publisher.Advertisement.ListenStateDiscoverability = WiFiDirectAdvertisementListenStateDiscoverability.Intensive;
 
+                _publisher.Advertisement.LegacySettings.Passphrase.Password = "jukka";
+                _publisher.Advertisement.LegacySettings.Passphrase.Password = "humppaa";
+                _publisher.Advertisement.LegacySettings.IsEnabled = true;
+
+                WiFiDirectAdvertisement add = _publisher.Advertisement;
+
+                foreach (WiFiDirectInformationElement element in add.InformationElements)
+                {
+                    System.Diagnostics.Debug.WriteLine("Oui.Length : " + element.Oui.Length + ", " + element.OuiType + ", " + element.Value + " : " + element.ToString());
+                }
+
+                System.Diagnostics.Debug.WriteLine("IsAutonomousGroupOwnerEnabled : " + add.IsAutonomousGroupOwnerEnabled);
+
+                WiFiDirectLegacySettings legacy = add.LegacySettings;
+
+                System.Diagnostics.Debug.WriteLine("legacy enabled : " + legacy.IsEnabled);
+                System.Diagnostics.Debug.WriteLine("legacy SSID(" + legacy.Ssid.Length + ") : " + legacy.Ssid);
+                System.Diagnostics.Debug.WriteLine("legacy pwd(" + legacy.Passphrase.Password.Length + ")  : " + legacy.Passphrase.Password);
+                System.Diagnostics.Debug.WriteLine("legacy user(" + legacy.Passphrase.UserName.Length + ")  : " + legacy.Passphrase.UserName);
+                System.Diagnostics.Debug.WriteLine("legacy res(" + legacy.Passphrase.Resource.Length + ")  : " +  legacy.Passphrase.Resource);
+
                 _listener = new WiFiDirectConnectionListener();
                 _listener.ConnectionRequested += _listener_ConnectionRequested;
 
@@ -288,7 +331,7 @@ namespace WifiDirectW10
                         System.Diagnostics.Debug.WriteLine("Connecting to " + ConnectionRequest.DeviceInformation.Name + "...");
 
                         WiFiDirectConnectionParameters connectionParams = new WiFiDirectConnectionParameters();
-                        connectionParams.GroupOwnerIntent = Convert.ToInt16("9");
+                        connectionParams.GroupOwnerIntent = Int16.MaxValue;// Convert.ToInt16("");
 
                         // IMPORTANT: FromIdAsync needs to be called from the UI thread
                         tcsWiFiDirectDevice.SetResult(await WiFiDirectDevice.FromIdAsync(ConnectionRequest.DeviceInformation.Id, connectionParams));
@@ -387,8 +430,8 @@ namespace WifiDirectW10
                     var messageDialog = new MessageDialog("Disconnect " + connectedDevice.DisplayName, "Disconnect device");
 
                     // Add commands and set their callbacks; both buttons use the same callback function instead of inline event handlers 
-                    messageDialog.Commands.Add(new UICommand("Accept", null, 0));
-                    messageDialog.Commands.Add(new UICommand("Decline", null, 1));
+                    messageDialog.Commands.Add(new UICommand("Ok", null, 0));
+                    messageDialog.Commands.Add(new UICommand("Cancel", null, 1));
 
                     // Set the command that will be invoked by default 
                     messageDialog.DefaultCommandIndex = 1;
@@ -415,8 +458,15 @@ namespace WifiDirectW10
 
         private void SendMessageButton_Click(object sender, RoutedEventArgs e)
         {
+            if(messageBox.Text.Length <= 0)
+            {
+                System.Diagnostics.Debug.WriteLine("No message specified for sending");
+                return;
+            }
+
             foreach (ConnectedDevice device in _connectedDevices)
             {
+
                 try
                 {
                     device.SocketRW.WriteMessage(messageBox.Text);

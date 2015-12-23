@@ -14,6 +14,7 @@ namespace WifiDirectServicesW10.Engine
 
         public WDServiceAdvertiser()
         {
+
             List<WiFiDirectServiceConfigurationMethod> configMethods = new List<WiFiDirectServiceConfigurationMethod>();
             configMethods.Add(WiFiDirectServiceConfigurationMethod.PinDisplay);
 
