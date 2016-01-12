@@ -1,0 +1,1 @@
+C:\a\Jukka\WifiDirectW10\BluetoothApp\BluetoothApp\BluetoothApp.csproj;x64
